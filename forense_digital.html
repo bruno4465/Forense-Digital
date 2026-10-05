@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forense Digital — Simulador de Provas</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2334c77b'/%3E%3Ctext x='32' y='45' font-family='monospace' font-size='36' fill='white' text-anchor='middle'%3E%23%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Manrope:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { theme: { extend: {
+  colors: { paper:'#FAF9F5', ink:'#2E2A24', soft:'#6B6558', line:'#E8E4D8', green:{ DEFAULT:'#22A05F', light:'#E9F7EF' }, red:'#D65A5A', amber:'#C98A2A' },
+  fontFamily: { ttl:['Sora','sans-serif'], txt:['Manrope','sans-serif'], mono:['"JetBrains Mono"','monospace'] },
+  gridTemplateColumns: { '32':'repeat(32,minmax(0,1fr))', '64':'repeat(64,minmax(0,1fr))' }
+}}}
+</script>
+
+<style type="text/tailwindcss">
+  .card { @apply bg-white rounded-2xl border border-line shadow-[0_2px_10px_rgba(46,42,36,0.04)]; }
+  .legenda { @apply flex gap-2.5 rounded-xl bg-green-light border border-green/20 px-4 py-3 text-[13.5px] leading-relaxed text-[#3d5a4a]; }
+  .legenda svg { @apply w-4 h-4 mt-0.5 shrink-0 text-green; }
+  .legenda b { @apply text-[#2E2A24]; }
+  .legenda-cinza { @apply flex gap-2.5 rounded-xl bg-[#F4F2EB] border border-line px-4 py-3 text-[13.5px] leading-relaxed text-soft; }
+  .legenda-cinza svg { @apply w-4 h-4 mt-0.5 shrink-0 text-[#9a927e]; }
+  .legenda-cinza b { @apply text-[#2E2A24]; }
+  .btn-go { @apply inline-flex items-center justify-center gap-2.5 rounded-xl px-7 py-4 font-ttl font-extrabold text-white select-none cursor-pointer; }
+  .btn-sec { @apply inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 font-ttl font-bold text-[15px] select-none cursor-pointer; }
+  .link-acao { @apply inline-flex items-center gap-1.5 rounded-full px-4 py-2 font-bold text-[13.5px] border-2 select-none cursor-pointer transition-all duration-150; }
+  .btncopy { @apply shrink-0 rounded-lg px-3 py-1.5 text-[11px] font-bold select-none cursor-pointer transition-all duration-150; }
+  .stepdot { @apply w-11 h-11 rounded-full grid place-items-center font-ttl font-bold border-2 transition-all shrink-0; }
+  .cmdbox { @apply flex items-center gap-2.5 rounded-xl bg-ink text-white pl-4 pr-2 py-2.5 font-mono text-[12px] sm:text-[12.5px] overflow-x-auto; }
+  .cmdbox code { @apply flex-1 whitespace-nowrap text-[#E9F7EF]; }
+  .cmdbox .sig { @apply text-[#7d7869] select-none shrink-0; }
+  .num { @apply w-8 h-8 rounded-lg bg-green-light text-green grid place-items-center font-ttl font-bold shrink-0; }
+</style>
+
+<style>
+  body { background:#FAF9F5; color:#2E2A24; }
+
+  .hcell { height:30px; display:grid; place-items:center; font-family:'JetBrains Mono',monospace;
+           font-weight:700; font-size:10px; border-radius:3px; transition:background .2s; }
+  @media (max-width:639px){ .hcell { height:24px; font-size:8px; } }
+
+  .tip { border-bottom:2px dotted #22A05F; cursor:help; position:relative; }
+  .tip::after { content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + 10px); transform:translateX(-50%);
+    background:#2E2A24; color:#fff; font-family:Manrope,sans-serif; font-weight:500; font-size:12px; line-height:1.5;
+    padding:8px 12px; border-radius:8px; width:240px; opacity:0; pointer-events:none; transition:opacity .2s; z-index:30; white-space:normal; }
+  .tip:hover::after { opacity:1; }
+
+  .btn-go { background:#0FA457; box-shadow:0 4px 0 #0A7540; font-size:15.5px;
+            transition:transform .15s ease, box-shadow .15s ease, filter .15s ease; }
+  @media (min-width:640px){ .btn-go { font-size:17px; } }
+  .btn-go:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 6px 0 #0A7540, 0 12px 26px rgba(15,164,87,.35); }
+  .btn-go:active:not(:disabled) { transform:translateY(2px); box-shadow:0 2px 0 #0A7540; }
+  .btn-go:disabled { background:#BDB6A8; box-shadow:0 4px 0 #c9c3b4; opacity:.45; transform:none; }
+
+  @keyframes chamar {
+    0%   { box-shadow:0 4px 0 #0A7540, 0 0 0 0 rgba(15,164,87,.45); }
+    70%  { box-shadow:0 4px 0 #0A7540, 0 0 0 12px rgba(15,164,87,0); }
+    100% { box-shadow:0 4px 0 #0A7540, 0 0 0 0 rgba(15,164,87,0); }
+  }
+  .btn-go:not(:disabled):not(:hover) { animation:chamar 2.2s ease-out infinite; }
+
+  .btn-sec { background:#fff; color:#0A7540; border:2px solid rgba(34,160,95,.5); transition:all .15s ease; }
+  .btn-sec:hover { background:#E9F7EF; border-color:#22A05F; }
+  .btn-sec:active { transform:translateY(2px); }
+
+  .link-acao { background:#E9F7EF; color:#137a47; border-color:rgba(34,160,95,.5); }
+  .link-acao:hover { background:#22A05F; border-color:#22A05F; color:#fff; }
+  .link-acao:active { transform:scale(.95); }
+  .btncopy { background:#22A05F; color:#fff; }
+  .btncopy:hover { filter:brightness(1.12); }
+  .btncopy:active { transform:scale(.95); }
+
+  /* ===== card de prova: inteiro clicável ===== */
+  .prov-card { cursor:pointer; transition:all .15s ease; }
+  .prov-card:hover { border-color:#22A05F; box-shadow:0 10px 24px rgba(34,160,95,.14); }
+  .prov-card.on { border-color:#22A05F; box-shadow:0 0 0 2px rgba(34,160,95,.3); }
+  .prov-card:focus-visible { outline:3px solid rgba(34,160,95,.5); outline-offset:2px; }
+
+  @keyframes pop { from{transform:scale(.6);opacity:0} to{transform:scale(1);opacity:1} }
+  .pop { animation:pop .35s ease both; }
+
+  ::selection { background:#22A05F33; }
+  ::-webkit-scrollbar { width:8px; } ::-webkit-scrollbar-thumb { background:#D8D3C4; border-radius:8px; }
+</style>
+
+<script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body class="font-txt antialiased">
+
+<!-- ==================== TOPO ==================== -->
+<nav class="bg-white/95 backdrop-blur border-b border-line sticky top-0 z-40">
+  <div class="max-w-4xl mx-auto px-4 h-[68px] flex items-center gap-3">
+    <button data-go="home" class="flex items-center gap-2.5">
+      <span class="w-10 h-10 rounded-xl bg-green grid place-items-center text-white"><i data-lucide="fingerprint" class="w-5 h-5"></i></span>
+      <span class="font-ttl font-bold text-xl">Forense <span class="text-green">Digital</span></span>
+    </button>
+    <div class="ml-auto flex gap-1.5 items-center text-sm font-bold">
+      <button data-go="home" class="px-4 py-2 rounded-lg hover:bg-[#F4F2EB]">Início</button>
+      <button data-go="lab"  class="px-4 py-2 rounded-full bg-green text-white shadow-[0_2px_0_#187544] hover:brightness-105">Simulador</button>
+      <button data-go="law"  class="px-4 py-2 rounded-lg hover:bg-[#F4F2EB]">Leis</button>
+    </div>
+  </div>
+</nav>
+
+<main class="max-w-4xl mx-auto px-4 pb-20">
+
+<!-- ============================================================ -->
+<!-- INÍCIO                                                        -->
+<!-- ============================================================ -->
+<section id="pg-home">
+  <div class="pt-14 pb-2 max-w-2xl">
+    <div class="font-mono text-xs tracking-[0.25em] text-green font-bold uppercase">Forense digital · simulador educacional</div>
+    <h1 class="font-ttl font-extrabold text-4xl sm:text-[44px] leading-[1.1] mt-3">
+      Um print pode ser editado.<br>Uma prova <span class="text-green">com hash</span>, não.
+    </h1>
+    <p class="mt-4 text-lg text-soft leading-relaxed">
+      Aprenda a guardar provas de <b class="text-ink">cyberbullying</b> do jeito que a justiça entende — em 4 passos.
+    </p>
+  </div>
+
+  <!-- O que é forense digital -->
+  <div class="card p-6 sm:p-8 mt-8">
+    <h2 class="font-ttl font-bold text-2xl">O que é forense digital?</h2>
+    <p class="mt-3 text-[15.5px] leading-relaxed text-soft">
+      É a <b class="text-ink">perícia do mundo digital</b>: encontrar, preservar e documentar provas que vivem em
+      celulares e redes — mensagens, fotos, prints. É o que transforma rastros em <b class="text-ink">prova com valor de justiça</b>.
+    </p>
+    <div class="mt-5 grid sm:grid-cols-3 gap-4">
+      <div class="flex gap-3 rounded-xl bg-[#F4F2EB] border border-line p-4">
+        <i data-lucide="search" class="w-5 h-5 text-green shrink-0 mt-0.5"></i>
+        <p class="text-[13px] leading-relaxed"><b>Encontra os rastros</b><br><span class="text-soft">todo clique deixa vestígio.</span></p>
+      </div>
+      <div class="flex gap-3 rounded-xl bg-[#F4F2EB] border border-line p-4">
+        <i data-lucide="shield-check" class="w-5 h-5 text-green shrink-0 mt-0.5"></i>
+        <p class="text-[13px] leading-relaxed"><b>Preserva sem mexer</b><br><span class="text-soft">guarda o arquivo como apareceu.</span></p>
+      </div>
+      <div class="flex gap-3 rounded-xl bg-[#F4F2EB] border border-line p-4">
+        <i data-lucide="clipboard-list" class="w-5 h-5 text-green shrink-0 mt-0.5"></i>
+        <p class="text-[13px] leading-relaxed"><b>Documenta tudo</b><br><span class="text-soft">quem, quando, como e para quem.</span></p>
+      </div>
+    </div>
+    <div class="legenda mt-5">
+      <i data-lucide="lightbulb"></i>
+      <span><b>E o hash?</b> Prova digital não tem lacre de cera. O hash é o lacre dela: uma conta matemática que
+      <b>fotografa o conteúdo exato</b> do arquivo na coleta. Se alguém mudar 1 letra depois, o código muda inteiro —
+      a edição fica denunciada. Teste você mesmo logo abaixo. 👇</span>
+    </div>
+  </div>
+
+  <!-- O problema -->
+  <div class="card p-6 sm:p-8 mt-6">
+    <h2 class="font-ttl font-bold text-2xl">O problema: provas que somem</h2>
+    <p class="mt-3 text-[15.5px] leading-relaxed text-soft">
+      Mensagens podem ser apagadas, perfis falsos desativados, registros das plataformas expiram.
+      O instinto é certo — <b class="text-ink">capturar a tela antes que sumam</b> — mas o print sozinho é frágil:
+    </p>
+    <div class="mt-5 grid sm:grid-cols-2 gap-3">
+      <div class="flex gap-3 rounded-xl bg-[#F4F2EB] border border-line p-3.5"><span class="num">1</span><p class="text-[13px]"><b>Sem origem verificável</b><br><span class="text-soft">sem dispositivo, conta ou data comprovável.</span></p></div>
+      <div class="flex gap-3 rounded-xl bg-[#F4F2EB] border border-line p-3.5"><span class="num">2</span><p class="text-[13px]"><b>Edição trivial</b><br><span class="text-soft">trocar uma palavra leva segundos.</span></p></div>
+      <div class="flex gap-3 rounded-xl bg-[#F4F2EB] border border-line p-3.5"><span class="num">3</span><p class="text-[13px]"><b>Sem contexto</b><br><span class="text-soft">um recorte oculta o antes e o depois.</span></p></div>
+      <div class="flex gap-3 rounded-xl bg-[#F4F2EB] border border-line p-3.5"><span class="num">4</span><p class="text-[13px]"><b>Cópia única</b><br><span class="text-soft">sem original, sem contra-prova.</span></p></div>
+    </div>
+    <div class="legenda mt-5">
+      <i data-lucide="lightbulb"></i>
+      <span><b>A solução:</b> registrar a origem, <b>selar com hash</b> e documentar a entrega num <b>termo</b>.
+      É o que o simulador ensina.</span>
+    </div>
+  </div>
+
+  <!-- Como funciona -->
+  <div class="card p-6 sm:p-8 mt-6">
+    <h2 class="font-ttl font-bold text-2xl">Como o simulador funciona</h2>
+    <div class="mt-5 grid sm:grid-cols-4 gap-3">
+      <div class="rounded-xl border border-line p-4"><span class="num">1</span><h3 class="font-ttl font-bold mt-2.5 text-[15px]">Escolher</h3><p class="text-[13px] text-soft mt-1">selecionar as provas do caso.</p></div>
+      <div class="rounded-xl border border-line p-4"><span class="num">2</span><h3 class="font-ttl font-bold mt-2.5 text-[15px]">Analisar</h3><p class="text-[13px] text-soft mt-1">ver o que vale num processo.</p></div>
+      <div class="rounded-xl border border-line p-4"><span class="num">3</span><h3 class="font-ttl font-bold mt-2.5 text-[15px]">Selar com hash</h3><p class="text-[13px] text-soft mt-1">a digital de cada arquivo.</p></div>
+      <div class="rounded-xl border border-line p-4"><span class="num">4</span><h3 class="font-ttl font-bold mt-2.5 text-[15px]">Gerar termo</h3><p class="text-[13px] text-soft mt-1">documento pronto em PDF.</p></div>
+    </div>
+  </div>
+
+  <!-- Teste de hash -->
+  <div class="card p-6 sm:p-8 mt-6">
+    <h2 class="font-ttl font-bold text-2xl flex items-center gap-2.5">
+      <i data-lucide="fingerprint" class="w-6 h-6 text-green"></i> Teste você mesmo: o que é um hash?
+    </h2>
+    <p class="mt-2 text-soft">
+      Todo arquivo tem uma <b class="text-ink">impressão digital</b> única — o
+      <span class="tip font-bold" data-tip="SHA-256: transforma qualquer arquivo em um código fixo de 64 caracteres. 1 letra muda, o código muda inteiro.">hash SHA-256</span>. Digite e veja:
+    </p>
+    <input id="demoIn" value="cyberbullying" spellcheck="false"
+      class="mt-4 w-full rounded-xl border-2 border-line px-4 py-3 text-lg font-bold outline-none focus:border-green bg-paper font-mono">
+    <div id="demoGrid" class="mt-4 grid grid-cols-32 sm:grid-cols-64 gap-[2px] select-none"></div>
+    <p id="demoTxt" class="mt-3 font-mono text-[10.5px] text-soft break-all leading-relaxed"></p>
+    <div class="mt-4">
+      <span class="inline-flex items-center gap-2 rounded-full bg-[#FdFaF2] border border-[#F0DFC0] px-4 py-2 text-[13.5px] font-bold text-amber">
+        <i data-lucide="zap" class="w-4 h-4"></i><span id="demoMudTx">Mude UMA letra e veja quantas casas mudam.</span>
+      </span>
+    </div>
+    <div class="legenda mt-4">
+      <i data-lucide="lightbulb"></i>
+      <span><b>Experiência:</b> mude uma letrinha — as casas que mudarem <b>pulam</b> na tela.
+      Numa prova inteira, funciona igual: é isso que denuncia a edição.</span>
+    </div>
+  </div>
+
+  <!-- Ajuda -->
+  <div class="card p-6 mt-8 border-[#F0DFC0] bg-[#FdFaF2]">
+    <h3 class="font-ttl font-bold text-lg flex items-center gap-2"><i data-lucide="life-buoy" class="w-5 h-5 text-amber"></i> Se isso está acontecendo com você de verdade</h3>
+    <ol class="mt-3 space-y-2 text-[14.5px] text-soft list-decimal list-inside font-medium">
+      <li><b class="text-ink">Não responda e não apague nada</b> — capture a tela primeiro.</li>
+      <li><b class="text-ink">Conte para um adulto</b> e registre um boletim de ocorrência.</li>
+      <li>Denuncie: <a class="text-green underline font-bold" href="https://www.safernet.org.br" target="_blank" rel="noopener">SaferNet</a> · CVV <b>188</b> · Disque <b>100</b>.</li>
+    </ol>
+  </div>
+
+  <!-- CTA único, no final -->
+  <div class="mt-12 pt-10 border-t border-line text-center">
+    <h2 class="font-ttl font-extrabold text-2xl sm:text-3xl">Pronto para guardar as provas?</h2>
+    <p class="mt-2 text-soft text-lg">Caso fictício, ~5 minutos, tudo no seu navegador.</p>
+    <button data-go="lab" class="btn-go mt-6 !px-10 !py-5 !text-lg sm:!text-xl">
+      Começar o simulador <i data-lucide="arrow-right" class="w-6 h-6"></i>
+    </button>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SIMULADOR                                                     -->
+<!-- ============================================================ -->
+<section id="pg-lab" hidden>
+
+  <div class="pt-10">
+    <div class="font-mono text-xs tracking-[0.25em] text-green font-bold uppercase">Caso fictício para estudo</div>
+    <h1 class="font-ttl font-extrabold text-3xl mt-2">Caso Marina — perfil falso no Instagram</h1>
+  </div>
+  <div class="card p-5 sm:p-6 mt-5">
+    <p class="text-[15px] leading-relaxed text-soft">
+      Criaram um perfil falso para humilhar <b class="text-ink">Marina, 14 anos</b>. As publicações estão sendo
+      apagadas e as mensagens do grupo sumindo. <b class="text-ink">Sua missão:</b> guardar as provas antes que
+      desapareçam — do jeito certo.
+    </p>
+    <div class="legenda-cinza mt-4">
+      <i data-lucide="info"></i>
+      <span><b>Por que apressar?</b> Mensagens apagadas não voltam — e os registros das plataformas expiram. BO logo, rastro salvo.</span>
+    </div>
+  </div>
+
+  <!-- Barra de passos (4) -->
+  <div id="stepsBar" class="mt-8 flex items-center justify-center gap-2 sm:gap-4"></div>
+
+  <!-- ============ PASSO 1: ESCOLHER ============ -->
+  <div id="passo1">
+    <h2 class="font-ttl font-bold text-2xl mt-10 flex items-center gap-3">
+      <span class="num !w-10 !h-10 text-lg">1</span> Escolha as provas
+    </h2>
+    <p class="mt-1.5 text-soft">Clique <b>em qualquer parte do card</b> para selecionar. O conteúdo já aparece aí.</p>
+
+    <div id="listaProv" class="mt-5 space-y-3.5"></div>
+
+    <div class="mt-7">
+      <button id="btnGoAnalise" class="btn-go" disabled>Continuar — analisar as provas <i data-lucide="arrow-right" class="w-5 h-5"></i></button>
+      <p id="hintSel" class="mt-2.5 text-sm text-soft font-medium">Selecione ao menos uma prova acima.</p>
+    </div>
+  </div>
+
+  <!-- ============ PASSO 2: ANÁLISE JUDICIAL ============ -->
+  <div id="passo2" hidden>
+    <h2 class="font-ttl font-bold text-2xl mt-10 flex items-center gap-3">
+      <span class="num !w-10 !h-10 text-lg">2</span> O que valeria num processo?
+    </h2>
+    <p class="mt-1.5 text-soft">Veja o valor de cada prova selecionada para a justiça:</p>
+
+    <div id="analise" class="mt-5 space-y-3.5"></div>
+
+    <div class="card p-5 mt-5">
+      <h3 class="font-ttl font-bold text-[15px]">O que a justiça procura numa prova digital</h3>
+      <div class="mt-3 grid sm:grid-cols-2 gap-2.5 text-[13px]">
+        <div class="flex gap-2.5 rounded-xl bg-[#F4F2EB] border border-line px-3.5 py-2.5"><i data-lucide="user-check" class="w-4 h-4 text-green shrink-0 mt-0.5"></i><span><b>Autenticidade</b> — dá pra saber quem produziu?</span></div>
+        <div class="flex gap-2.5 rounded-xl bg-[#F4F2EB] border border-line px-3.5 py-2.5"><i data-lucide="lock" class="w-4 h-4 text-green shrink-0 mt-0.5"></i><span><b>Integridade</b> — mudou depois? (o hash responde)</span></div>
+        <div class="flex gap-2.5 rounded-xl bg-[#F4F2EB] border border-line px-3.5 py-2.5"><i data-lucide="message-circle-more" class="w-4 h-4 text-green shrink-0 mt-0.5"></i><span><b>Contexto</b> — a conversa aparece completa?</span></div>
+        <div class="flex gap-2.5 rounded-xl bg-[#F4F2EB] border border-line px-3.5 py-2.5"><i data-lucide="link" class="w-4 h-4 text-green shrink-0 mt-0.5"></i><span><b>Corroboração</b> — várias fontes contam a mesma história?</span></div>
+      </div>
+    </div>
+
+    <div class="legenda mt-4">
+      <i data-lucide="lightbulb"></i>
+      <span><b>Importante:</b> todas as provas seguem guardadas — inclusive a fraca. Sozinhas elas valem pouco;
+      <b>juntas, elas se reforçam</b>. O hash (próximo passo) garante a integridade de todas.</span>
+    </div>
+
+    <div class="mt-6">
+      <button id="btnGoHash" class="btn-go">Continuar — calcular os hashes <i data-lucide="arrow-right" class="w-5 h-5"></i></button>
+    </div>
+  </div>
+
+  <!-- ============ PASSO 3: HASH ============ -->
+  <div id="passo3" hidden>
+    <h2 class="font-ttl font-bold text-2xl mt-10 flex items-center gap-3">
+      <span class="num !w-10 !h-10 text-lg">3</span> Selar cada prova com seu hash
+    </h2>
+    <p class="mt-1.5 text-soft">O navegador calcula a impressão digital (SHA-256) de cada arquivo.</p>
+
+    <div class="legenda-cinza mt-4">
+      <i data-lucide="lock"></i>
+      <span><b>Segurança:</b> o cálculo roda <b>no seu navegador</b> — nada sai do seu computador.</span>
+    </div>
+
+    <div id="digitais" class="mt-5 space-y-3.5"></div>
+
+    <div class="mt-5 text-center">
+      <button id="btnDig" class="btn-go">Calcular os hashes agora <i data-lucide="fingerprint" class="w-5 h-5"></i></button>
+    </div>
+
+    <div id="truque" hidden class="card p-6 mt-6">
+      <h3 class="font-ttl font-bold text-lg flex items-center gap-2">
+        <i data-lucide="flask-conical" class="w-5 h-5 text-green"></i> Teste: e se alguém editar a prova?
+      </h3>
+      <p class="mt-1.5 text-[14px] text-soft">Simulamos um injusto mudando <b class="text-ink">1 única letra</b> e recalculamos:</p>
+      <div class="mt-3 text-center">
+        <button id="btnTruque" class="btn-sec">Simular a edição e recalcular</button>
+      </div>
+      <div id="truqueOut" class="mt-4"></div>
+    </div>
+
+    <div class="mt-7">
+      <button id="btnGoTermo" class="btn-go" disabled>Continuar — gerar o termo <i data-lucide="arrow-right" class="w-5 h-5"></i></button>
+      <p id="hintHash" class="mt-2.5 text-sm text-soft font-medium">Calcule os hashes primeiro.</p>
+    </div>
+  </div>
+
+  <!-- ============ PASSO 4: TERMO ============ -->
+  <div id="passo4" hidden>
+    <h2 class="font-ttl font-bold text-2xl mt-10 flex items-center gap-3">
+      <span class="num !w-10 !h-10 text-lg">4</span> Termo de Cadeia de Custódia
+    </h2>
+    <p class="mt-1.5 text-soft">Só duas informações — o resto o site preenche sozinho.</p>
+
+    <div class="card p-6 mt-5 space-y-6">
+      <div>
+        <label class="block font-bold text-[15px] mb-1.5" for="fNome">✏️ Nome de quem guardou as provas</label>
+        <input id="fNome" class="w-full rounded-xl border-2 border-line px-4 py-3 text-lg font-bold outline-none focus:border-green bg-paper" placeholder="Seu nome completo">
+        <div class="legenda-cinza mt-2.5 !py-2.5"><i data-lucide="info"></i><span><b>Legenda:</b> a justiça precisa saber <b>quem</b> coletou. Mentir aqui compromete tudo.</span></div>
+      </div>
+      <div>
+        <label class="block font-bold text-[15px] mb-1.5" for="fDest">📋 Para quem as provas serão entregues</label>
+        <select id="fDest" class="w-full rounded-xl border-2 border-line px-4 py-3 text-lg font-bold outline-none focus:border-green bg-paper">
+          <option value="">Escolha um destino…</option>
+          <option>Delegacia de Polícia</option><option>Coordenação da escola</option>
+          <option>Advogado(a) / Defensoria</option><option>Família / responsável</option>
+        </select>
+        <div class="legenda-cinza mt-2.5 !py-2.5"><i data-lucide="info"></i><span><b>Legenda:</b> prova precisa de destino oficial. <b>Delegacia</b> (ou delegacia eletrônica) é o caminho mais forte.</span></div>
+      </div>
+    </div>
+
+    <div class="mt-6">
+      <button id="btnTermo" class="btn-go">Gerar o Termo <i data-lucide="file-check" class="w-5 h-5"></i></button>
+    </div>
+  </div>
+
+  <!-- ============ RESULTADO ============ -->
+  <div id="resultado" hidden class="mt-10">
+    <div class="pop text-center">
+      <div class="font-ttl font-extrabold text-3xl">Provas guardadas com sucesso 🎉</div>
+      <p class="mt-2 text-soft">Confira o documento que amarra tudo — e baixe para terminar.</p>
+    </div>
+
+    <div class="card p-6 sm:p-8 mt-6">
+      <h3 class="font-ttl font-bold text-xl">Termo de Cadeia de Custódia</h3>
+      <p class="text-xs font-mono text-soft mt-1">Caso Marina · simulador Forense Digital</p>
+      <div class="h-px bg-line my-5"></div>
+      <div class="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-[15px] font-bold">
+        <p>👤 Guardou: <span id="tNome"></span></p>
+        <p>📅 Data: <span id="tData"></span></p>
+        <p>📋 Entregue a: <span id="tDest"></span></p>
+        <p>🔒 Método: hash SHA-256 calculado localmente</p>
+      </div>
+      <div class="mt-5 overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead><tr class="bg-ink text-white text-left">
+            <th class="p-2.5 rounded-l-lg font-mono text-[10px] tracking-wider">PROVA</th>
+            <th class="p-2.5 font-mono text-[10px] tracking-wider">ARQUIVO</th>
+            <th class="p-2.5 rounded-r-lg font-mono text-[10px] tracking-wider">HASH SHA-256</th>
+          </tr></thead>
+          <tbody id="tProv"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="legenda mt-4">
+      <i data-lucide="lightbulb"></i>
+      <span><b>Legenda:</b> este documento é a <b class="tip" data-tip="Registro de quem manuseou a prova, quando e como — da coleta ao tribunal. Sem ela, a prova pode ser descartada.">cadeia de custódia</b>: liga cada arquivo ao seu hash. Se alguém editar depois, o hash denuncia.</span>
+    </div>
+
+    <div class="mt-7 flex flex-wrap gap-3">
+      <button id="btnPDF" class="btn-go"><i data-lucide="download" class="w-5 h-5"></i> Baixar o Termo (PDF)</button>
+      <button id="btnArq" class="btn-sec"><i data-lucide="hard-drive-download" class="w-4 h-4"></i> Baixar as provas</button>
+      <button id="btnDeNovo" class="btn-sec"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Recomeçar</button>
+    </div>
+    <div class="legenda-cinza mt-4">
+      <i data-lucide="shield-check"></i>
+      <span><b>Prova de que funciona:</b> baixe os arquivos e confira o hash no seu computador — passo a passo na seção abaixo.</span>
+    </div>
+  </div>
+
+  <!-- ============ ONDE CALCULAR HASH FORA DAQUI ============ -->
+  <div class="mt-14 pt-8 border-t border-line">
+    <h2 class="font-ttl font-bold text-2xl flex items-center gap-2.5">
+      <i data-lucide="monitor-check" class="w-6 h-6 text-green"></i> Onde calcular o hash fora daqui
+    </h2>
+    <p class="mt-2 text-soft max-w-2xl">Seu computador <b class="text-ink">já sabe calcular hash</b> — sem instalar nada:</p>
+
+    <div class="mt-6 grid md:grid-cols-2 gap-4">
+      <div class="card p-5">
+        <div class="flex items-center gap-2.5">
+          <span class="w-9 h-9 rounded-lg bg-green-light text-green grid place-items-center shrink-0"><i data-lucide="monitor" class="w-[18px] h-[18px]"></i></span>
+          <div class="font-ttl font-bold leading-tight">Windows — Prompt de Comando</div>
+        </div>
+        <p class="mt-2.5 text-[13px] text-soft">Menu Iniciar → digite <span class="font-mono text-[12px] bg-[#F4F2EB] px-1.5 py-0.5 rounded">cmd</span> → Enter. Depois:</p>
+        <div class="cmdbox mt-2.5">
+          <span class="sig">›</span><code>certutil -hashfile prova.png SHA256</code>
+          <button class="btncopy" data-cmd="certutil -hashfile prova.png SHA256">copiar</button>
+        </div>
+        <div class="legenda-cinza mt-2.5 !text-[12px]"><i data-lucide="info"></i>
+          <span><b>Truque:</b> deixe um espaço no final e <b>arraste o arquivo</b> para a janela — o caminho se completa sozinho.</span></div>
+      </div>
+
+      <div class="card p-5">
+        <div class="flex items-center gap-2.5">
+          <span class="w-9 h-9 rounded-lg bg-green-light text-green grid place-items-center shrink-0"><i data-lucide="app-window" class="w-[18px] h-[18px]"></i></span>
+          <div class="font-ttl font-bold leading-tight">Windows — PowerShell</div>
+        </div>
+        <p class="mt-2.5 text-[13px] text-soft">Botão direito no Iniciar → “Terminal”. Depois:</p>
+        <div class="cmdbox mt-2.5">
+          <span class="sig">›</span><code>Get-FileHash prova.png -Algorithm SHA256</code>
+          <button class="btncopy" data-cmd="Get-FileHash prova.png -Algorithm SHA256">copiar</button>
+        </div>
+        <div class="legenda-cinza mt-2.5 !text-[12px]"><i data-lucide="info"></i>
+          <span><b>Legenda:</b> o hash aparece na linha “Hash”. O truque do arrastar também funciona aqui.</span></div>
+      </div>
+
+      <div class="card p-5">
+        <div class="flex items-center gap-2.5">
+          <span class="w-9 h-9 rounded-lg bg-green-light text-green grid place-items-center shrink-0"><i data-lucide="terminal" class="w-[18px] h-[18px]"></i></span>
+          <div class="font-ttl font-bold leading-tight">Linux — Terminal</div>
+        </div>
+        <p class="mt-2.5 text-[13px] text-soft"><span class="font-mono text-[12px] bg-[#F4F2EB] px-1.5 py-0.5 rounded">Ctrl+Alt+T</span> · pasta: <span class="font-mono text-[12px]">cd ~/Downloads</span>. Depois:</p>
+        <div class="cmdbox mt-2.5">
+          <span class="sig">›</span><code>sha256sum prova.png</code>
+          <button class="btncopy" data-cmd="sha256sum prova.png">copiar</button>
+        </div>
+        <div class="legenda-cinza mt-2.5 !text-[12px]"><i data-lucide="info"></i>
+          <span><b>Legenda:</b> código à esquerda, nome do arquivo à direita.</span></div>
+      </div>
+
+      <div class="card p-5">
+        <div class="flex items-center gap-2.5">
+          <span class="w-9 h-9 rounded-lg bg-green-light text-green grid place-items-center shrink-0"><i data-lucide="command" class="w-[18px] h-[18px]"></i></span>
+          <div class="font-ttl font-bold leading-tight">Mac — Terminal</div>
+        </div>
+        <p class="mt-2.5 text-[13px] text-soft"><span class="font-mono text-[12px] bg-[#F4F2EB] px-1.5 py-0.5 rounded">⌘ + Espaço</span> → “Terminal”. Depois:</p>
+        <div class="cmdbox mt-2.5">
+          <span class="sig">›</span><code>shasum -a 256 prova.png</code>
+          <button class="btncopy" data-cmd="shasum -a 256 prova.png">copiar</button>
+        </div>
+        <div class="legenda-cinza mt-2.5 !text-[12px]"><i data-lucide="info"></i>
+          <span><b>Legenda:</b> <span class="font-mono text-[11px]">-a 256</span> escolhe o algoritmo SHA-256.</span></div>
+      </div>
+    </div>
+
+    <!-- Experimento final -->
+    <div class="card p-6 mt-6 !bg-[#F3FAF5] border-green/30">
+      <h3 class="font-ttl font-bold text-lg flex items-center gap-2">
+        <i data-lucide="flask-conical" class="w-5 h-5 text-green"></i> Experimento final: verifique você mesmo
+      </h3>
+      <p class="mt-1.5 text-[14px] text-soft leading-relaxed">
+        Baixe a Prova 1 e calcule o hash no seu computador. Se o código for <b class="text-ink">igual ao do termo</b>,
+        você acabou de comprovar a integridade de um arquivo real.
+      </p>
+      <div class="mt-4">
+        <button id="btnTesteHash" class="btn-go"><i data-lucide="download" class="w-5 h-5"></i> Baixar a Prova 1 e testar</button>
+      </div>
+      <div id="testeOut" class="mt-5"></div>
+    </div>
+
+    <div class="card p-5 mt-4 border-[#F0DFC0] bg-[#FdFaF2]">
+      <p class="text-[13.5px] text-soft leading-relaxed flex gap-2.5">
+        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber shrink-0 mt-0.5"></i>
+        <span><b class="text-ink">Cuidado com sites de hash online:</b> eles enviam o arquivo para o servidor de outra pessoa.
+        Para provas sensíveis, use o terminal — nada sai do seu computador.</span>
+      </p>
+    </div>
+  </div>
+
+  <!-- Registro -->
+  <details class="card p-5 mt-12">
+    <summary class="font-ttl font-bold cursor-pointer select-none flex items-center gap-2">
+      <i data-lucide="scroll-text" class="w-5 h-5 text-green"></i> Registro das ações desta sessão
+    </summary>
+    <div id="diario" class="mt-3 font-mono text-[12.5px] text-soft space-y-1 max-h-48 overflow-auto"></div>
+  </details>
+</section>
+
+<!-- ============================================================ -->
+<!-- LEIS                                                          -->
+<!-- ============================================================ -->
+<section id="pg-law" hidden>
+  <div class="pt-12">
+    <h1 class="font-ttl font-extrabold text-3xl">As leis por trás do simulador</h1>
+    <p class="mt-3 text-soft text-lg max-w-2xl">Resumo simples — cada uma com o que significa na prática.</p>
+  </div>
+
+  <div class="mt-8 space-y-4">
+    <div class="card p-6">
+      <h3 class="font-ttl font-bold text-lg">Lei 14.811/2024 — crime de cyberbullying</h3>
+      <p class="mt-2 text-[14.5px] text-soft leading-relaxed">
+        Criou o art. 146-B do Código Penal: <b class="text-ink">intimidar, perseguir, humilhar ou ofender alguém pela internet</b> é crime — reclusão de 2 a 6 anos, mais grave contra criança ou adolescente.
+      </p>
+      <div class="legenda mt-3"><i data-lucide="lightbulb"></i><span><b>Na prática:</b> dá boletim de ocorrência, e a polícia investiga.</span></div>
+    </div>
+
+    <div class="card p-6">
+      <h3 class="font-ttl font-bold text-lg">Cadeia de Custódia — CPP, arts. 158-A a 158-F</h3>
+      <p class="mt-2 text-[14.5px] text-soft leading-relaxed">
+        Procedimentos que preservam o vestígio do local do crime até o tribunal: <b class="text-ink">quem manuseou, quando, como e por quê</b>.
+      </p>
+      <div class="legenda mt-3"><i data-lucide="lightbulb"></i><span><b>Na prática:</b> vale até para <b>provas coletadas por pessoas comuns</b> (art. 158-B, § único) — quanto mais organizada a coleta, mais difícil de descartar.</span></div>
+    </div>
+
+    <div class="card p-6">
+      <h3 class="font-ttl font-bold text-lg">Marco Civil — Lei 12.965/2014</h3>
+      <p class="mt-2 text-[14.5px] text-soft leading-relaxed">
+        Provedores devem <b class="text-ink">guardar registros de acesso</b> por prazo limitado e <b class="text-ink">remover conteúdo</b> quando notificados.
+      </p>
+      <div class="legenda mt-3"><i data-lucide="lightbulb"></i><span><b>Na prática:</b> os registros que identificam o perfil falso existem — mas somem rápido. Notifique e registre o BO cedo.</span></div>
+    </div>
+
+    <div class="card p-6">
+      <h3 class="font-ttl font-bold text-lg">LGPD — Lei 13.709/2018</h3>
+      <p class="mt-2 text-[14.5px] text-soft leading-relaxed">
+        Prova digital é dado pessoal — <b class="text-ink">da vítima e dos agressores</b>. Coletar para se defender é permitido; espalhar, não.
+      </p>
+      <div class="legenda mt-3"><i data-lucide="lightbulb"></i><span><b>Na prática:</b> ao mostrar provas a terceiros, cubra dados desnecessários. O original fica intacto para a autoridade.</span></div>
+    </div>
+  </div>
+
+  <div class="card p-5 mt-6 border-[#F0DFC0] bg-[#FdFaF2]">
+    <p class="text-[13.5px] text-soft leading-relaxed flex gap-2.5">
+      <i data-lucide="alert-triangle" class="w-4 h-4 text-amber shrink-0 mt-0.5"></i>
+      <span><b class="text-ink">Regra de ouro:</b> nunca entre na conta de outra pessoa para “coletar provas” — vira prova ilícita.
+      Site educacional; para casos reais, procure a Defensoria ou um(a) advogado(a).</span>
+    </p>
+  </div>
+
+  <button data-go="lab" class="btn-go mt-10">Testar no simulador <i data-lucide="arrow-right" class="w-5 h-5"></i></button>
+</section>
+</main>
+
+<footer class="border-t border-line py-8 text-center text-[13px] text-soft font-medium">
+  Forense Digital · projeto educacional · tudo roda no seu navegador 🔒
+</footer>
+
+<div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden">
+  <div class="bg-ink text-white rounded-full px-6 py-3 font-bold shadow-2xl flex items-center gap-2.5" id="toastIn"></div>
+</div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const fmtBR = d => `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const icons = () => window.lucide && lucide.createIcons();
+let toastT;
+function toast(html, ic='✅'){
+  $('toastIn').innerHTML = `<span>${ic}</span><span>${html}</span>`;
+  $('toast').classList.remove('hidden');
+  clearTimeout(toastT); toastT = setTimeout(() => $('toast').classList.add('hidden'), 3200);
+}
+function diario(msg){
+  const t = new Date();
+  $('diario').insertAdjacentHTML('beforeend',
+    `<p><span class="text-[#B4AC97]">[${pad(t.getHours())}:${pad(t.getMinutes())}:${pad(t.getSeconds())}]</span> ${esc(msg)}</p>`);
+}
+async function copiarTexto(txt){
+  try { await navigator.clipboard.writeText(txt); }
+  catch {
+    const ta = document.createElement('textarea'); ta.value = txt;
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+  }
+}
+
+/* ---------- SHA-256 ---------- */
+async function sha256(bytes){
+  try { if (crypto && crypto.subtle){
+    const d = await crypto.subtle.digest('SHA-256', bytes);
+    return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2,'0')).join('');
+  }} catch(e){}
+  return sha256JS(bytes);
+}
+function sha256JS(bytes){
+  const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  const R=(x,n)=>((x>>>n)|(x<<(32-n)))>>>0;
+  const l=bytes.length,k=((56-(l+1)%64)+64)%64,T=l+1+k+8,m=new Uint8Array(T);
+  m.set(bytes); m[l]=0x80;
+  const dv=new DataView(m.buffer);
+  dv.setUint32(T-8,Math.floor(l/536870912)); dv.setUint32(T-4,(l*8)>>>0);
+  let h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const w=new Int32Array(64);
+  for(let i=0;i<T;i+=64){
+    for(let t=0;t<16;t++)w[t]=dv.getUint32(i+t*4);
+    for(let t=16;t<64;t++){
+      const a=w[t-15],b=w[t-2];
+      w[t]=(w[t-16]+((R(a,7)^R(a,18)^(a>>>3))>>>0)+w[t-7]+((R(b,17)^R(b,19)^(b>>>10))>>>0))|0;
+    }
+    let a=h[0],b=h[1],c=h[2],d=h[3],e=h[4],f=h[5],g=h[6],hh=h[7];
+    for(let t=0;t<64;t++){
+      const t1=(hh+((R(e,6)^R(e,11)^R(e,25))>>>0)+(((e&f)^(~e&g))>>>0)+(K[t]>>>0)+(w[t]>>>0))>>>0;
+      const t2=(((R(a,2)^R(a,13)^R(a,22))>>>0)+(((a&b)^(a&c)^(b&c))>>>0))>>>0;
+      hh=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b;b=a;a=(t1+t2)>>>0;
+    }
+    h=[(h[0]+a)>>>0,(h[1]+b)>>>0,(h[2]+c)>>>0,(h[3]+d)>>>0,(h[4]+e)>>>0,(h[5]+f)>>>0,(h[6]+g)>>>0,(h[7]+hh)>>>0];
+  }
+  return h.map(x=>(x>>>0).toString(16).padStart(8,'0')).join('');
+}
+
+/* ---------- Faixas de hash ---------- */
+function stripHTML(h){
+  return `<div class="grid grid-cols-32 sm:grid-cols-64 gap-[2px] select-none">${[...h].map(ch=>{
+    const n = parseInt(ch,16);
+    return `<span class="hcell" style="background:rgba(34,160,95,${(0.10+n*0.056).toFixed(3)});color:${n>=8?'#0b3d22':'#1d7a4a'}">${ch}</span>`;
+  }).join('')}</div>`;
+}
+function stripDiffHTML(h, base){
+  return `<div class="grid grid-cols-32 sm:grid-cols-64 gap-[2px] select-none">${[...h].map((ch,i)=>{
+    if (ch === base[i]) return `<span class="hcell" style="background:#EDEBE3;color:#B4AC97">${ch}</span>`;
+    const n = parseInt(ch,16);
+    return `<span class="hcell" style="background:rgba(214,90,90,${(0.45+n*0.035).toFixed(3)});color:#fff">${ch}</span>`;
+  }).join('')}</div>`;
+}
+const esp = h => h.replace(/(.{16})/g,'$1 ').trim();
+
+/* ---------- Navegação ---------- */
+const PGS = { home:'pg-home', lab:'pg-lab', law:'pg-law' };
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-go]');
+  if (b){
+    Object.values(PGS).forEach(id => $(id).hidden = true);
+    $(PGS[b.dataset.go]).hidden = false;
+    window.scrollTo(0,0); icons();
+  }
+});
+
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-cmd]');
+  if (!b) return;
+  await copiarTexto(b.dataset.cmd);
+  const old = b.textContent;
+  b.textContent = 'copiado ✓';
+  setTimeout(() => { b.textContent = old; }, 1500);
+  toast('Comando copiado — cole no terminal e aperte Enter.');
+});
+
+/* ---------- Home: hash ao vivo ---------- */
+const cells = [];
+for (let i=0;i<64;i++){
+  const c = document.createElement('span');
+  c.className = 'hcell';
+  $('demoGrid').appendChild(c); cells.push(c);
+}
+let prev = null, tok = 0;
+async function demo(){
+  const t = ++tok;
+  const h = await sha256(new TextEncoder().encode($('demoIn').value));
+  if (t !== tok) return;
+  let mudou = 0;
+  cells.forEach((c,i)=>{
+    const mudouAqui = prev && prev[i] !== h[i];
+    if (mudouAqui) mudou++;
+    const n = parseInt(h[i],16);
+    c.textContent = h[i];
+    c.style.background = `rgba(34,160,95,${(0.10+n*0.056).toFixed(3)})`;
+    c.style.color = n>=8 ? '#0b3d22' : '#1d7a4a';
+    if (mudouAqui) c.animate([{transform:'scale(1.6)', filter:'brightness(1.6)'},{transform:'scale(1)'}],{duration:280});
+  });
+  if (prev) $('demoMudTx').innerHTML = `<b>${mudou}</b> de 64 casas mudaram com essa alteração`;
+  $('demoTxt').textContent = esp(h);
+  prev = h;
+}
+ $('demoIn').addEventListener('input', demo);
+
+/* ---------- As provas do caso ---------- */
+const CONV = `==========================================================
+ REGISTRO DE CONVERSA — GRUPO "9o B" (WhatsApp)
+==========================================================
+ Origem.....: celular da Marina, exportado do próprio app
+ Coleta.....: 14/05/2024, 21h32
+ Telefone...: +55 11 9****-3210 e outros (mascarados - LGPD)
+
+[19:41] Autor A: ela tentou sentar com a gente de novo
+[19:41] Autor A: alguem avisa ela que nao e bem-vinda
+[19:42] Autor B: o perfil falso ta bombando kkkk
+[19:42] Autor C: gente, isso e bullying. para com isso
+[19:43] Autor A: relaxa, e so zoacao
+[19:43] Autor A: alem disso ninguem vai acreditar nela
+[19:46] Autor C: eu vou avisar a coordenacao amanha
+[19:52] Autor A: ja apaguei minhas mensagens kkkk
+[20:03] Autor B: apaguei tb. sem provas, sem punicao
+
+==> Marina exportou o registro antes que apagassem.
+==========================================================`;
+
+const FRAG = `==============================================
+ RECORTE ENCAMINHADO POR COLEGA (Direct)
+==============================================
+ Chegou assim, sem comeco nem fim:
+
+ "kkkk vcs viram oq postaram pra ela??? ...
+  ...depois que ela reclamar a gente posta
+  de novo [restante nao recebido]"
+
+ OBSERVACAO: sem autor, data ou contexto.
+ Guardado exatamente como chegou.
+==============================================`;
+
+async function gerarPrint(){
+  const c = document.createElement('canvas'); c.width = 640; c.height = 800;
+  const x = c.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0,0,640,800);
+  x.fillStyle = '#ddd'; x.beginPath(); x.arc(58,52,26,0,7); x.fill();
+  x.fillStyle = '#888'; x.beginPath(); x.arc(58,45,9,0,7); x.fill();
+  x.beginPath(); x.arc(58,74,15,Math.PI,0); x.fill();
+  x.fillStyle = '#111'; x.font = 'bold 24px Arial'; x.fillText('@perfil.falso', 100, 48);
+  x.fillStyle = '#777'; x.font = '15px Arial'; x.fillText('47 seguidores · 3 publicacoes', 100, 70);
+  x.fillStyle = '#333a45'; x.fillRect(0,100,640,420);
+  x.fillStyle = '#5a6577'; x.beginPath(); x.arc(320,260,68,0,7); x.fill();
+  x.fillStyle = 'rgba(255,255,255,.28)'; x.font = 'bold 24px Courier New'; x.textAlign='center';
+  x.fillText('FOTO DA MARINA (SIMULADA)', 320, 380); x.textAlign='left';
+  x.fillStyle = '#111'; x.font = 'bold 19px Arial';
+  x.fillText('olha quem chegou. ninguem gosta dela', 32, 560);
+  x.fillStyle = '#444'; x.font = '17px Arial';
+  ['anon_43: vai chorar pro coordenador kkkk','turma_9b: combinado: ninguem fala com ela','anon_99: alguem manda pra familia dela'].forEach((t,i)=>x.fillText(t,32,596+i*28));
+  x.fillStyle = '#2E2A24'; x.fillRect(0,724,640,76);
+  x.fillStyle = '#22A05F'; x.font = 'bold 15px Courier New'; x.textAlign='center';
+  x.fillText('PROVA 1 · PRINT DO PERFIL FALSO · SIMULACAO', 320, 758);
+  x.fillStyle = '#bbb'; x.font = '12px Courier New';
+  x.fillText('capturado no celular da Marina · 14/05/2024 · sem edicao', 320, 782); x.textAlign='left';
+  const blob = await new Promise(r => c.toBlob(r,'image/png'));
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
+const PROVAS = [
+  { key:'p1', id:'Prova 1', ic:'image', titulo:'Print do perfil falso', arquivo:'prova-1-print-perfil.png', mime:'image/png',
+    desc:'Captura da publicação que humilhava a Marina.',
+    leg:'Print mostra o fato, mas é frágil: editável em segundos. O hash resolve — selado, qualquer edição é detectada.',
+    julg:{ nivel:'media', rotulo:'Útil, mas precisa de apoio', cor:'amber', ic:'alert-circle',
+      txt:'Prova que a publicação existiu — mas um print isolado não mostra contexto nem autoria. Junte-o com as outras provas: em conjunto, ele confirma o fato.' },
+    tipo:'img', bytes:null, hash:null, url:null },
+  { key:'p2', id:'Prova 2', ic:'message-square-text', titulo:'Conversa do grupo exportada', arquivo:'prova-2-conversa.txt', mime:'text/plain',
+    desc:'Registro do WhatsApp, exportado do próprio app da Marina.',
+    leg:'Mais forte que o print: sai do app com data, hora e remetente. Mostra o combinado de excluir e apagar.',
+    julg:{ nivel:'forte', rotulo:'Prova forte', cor:'green', ic:'badge-check',
+      txt:'Saiu do próprio WhatsApp, com data, hora e remetente de cada fala. Mostra o combinado de humilhar e a intenção de apagar — “sem provas, sem punição” é ouro num processo.' },
+    tipo:'txt', txt:CONV, bytes:null, hash:null, url:null },
+  { key:'p3', id:'Prova 3', ic:'scissors', titulo:'Recorte sem contexto', arquivo:'prova-3-recorte.txt', mime:'text/plain',
+    desc:'Trecho de conversa encaminhado por um colega, já editado.',
+    leg:'Fraca: sem autor, data ou início da conversa. O hash protege o que chegou — não prova quem escreveu.',
+    julg:{ nivel:'fraca', rotulo:'Fraca — só apoia', cor:'red', ic:'x-circle',
+      txt:'Sem autor, data ou começo da conversa. Sozinha quase não vale; serve para confirmar as outras. Guarde, mas não confie só nela.' },
+    tipo:'txt', txt:FRAG, bytes:null, hash:null, url:null },
+];
+const sel = new Set();
+
+async function bytesDe(p){
+  if (p.bytes) return p.bytes;
+  if (!p.gen) p.gen = (async () => {
+    p.bytes = p.tipo === 'img' ? await gerarPrint() : new TextEncoder().encode(p.txt);
+    return p.bytes;
+  })();
+  return p.gen;
+}
+
+/* ---------- Passo 1: cards SEMPRE com preview, INTEIROS clicáveis ---------- */
+async function abrirPreview(p){
+  if (p.tipo === 'img' && !p.url){
+    await bytesDe(p);
+    p.url = URL.createObjectURL(new Blob([p.bytes], { type:'image/png' }));
+  }
+  const box = $('prev-' + p.key);
+  if (!box) return;
+  if (p.tipo === 'img'){
+    box.innerHTML = `
+      <img src="${p.url}" alt="Print simulado do perfil falso" class="w-full max-w-xs mx-auto rounded-xl border border-line shadow-sm">
+      <div class="legenda-cinza mt-3 !text-[12px]"><i data-lucide="info"></i>
+      <span><b>Legenda:</b> imagem gerada agora no seu navegador. O hash será a digital <b>exata deste arquivo</b> — baixando, o código confere.</span></div>`;
+  } else {
+    box.innerHTML = `<pre class="rounded-xl border border-line bg-paper p-4 font-mono text-[11px] leading-relaxed text-[#4a453c] whitespace-pre-wrap break-words max-h-60 overflow-auto">${esc(p.txt)}</pre>`;
+  }
+  icons();
+}
+
+function renderProv(){
+  $('listaProv').innerHTML = PROVAS.map(p => {
+    const on = sel.has(p.key);
+    return `
+    <div class="card prov-card overflow-hidden ${on ? 'on' : ''}" data-p="${p.key}" role="button" tabindex="0" aria-pressed="${on}">
+      <div class="p-5 flex items-center gap-4">
+        <span class="w-12 h-12 rounded-xl ${on ? 'bg-green text-white' : 'bg-green-light text-green'} grid place-items-center shrink-0">
+          <i data-lucide="${p.ic}" class="w-6 h-6"></i>
+        </span>
+        <span class="min-w-0 flex-1">
+          <span class="block font-ttl font-bold text-lg leading-tight">${p.titulo} ${on ? '<span class="text-green">· selecionada</span>' : ''}</span>
+          <span class="block text-[13.5px] text-soft mt-0.5">${p.desc}</span>
+        </span>
+        <span class="w-9 h-9 rounded-full border-2 grid place-items-center shrink-0 font-bold text-lg ${on ? 'border-green bg-green text-white pop' : 'border-green/40 text-green/50'}">${on ? '✓' : '+'}</span>
+      </div>
+      <div class="px-5 pb-5">
+        <div class="legenda-cinza !text-[12.5px]"><i data-lucide="info"></i><span>${p.leg}</span></div>
+        <div id="prev-${p.key}" class="mt-3"></div>
+      </div>
+    </div>`;
+  }).join('');
+  PROVAS.forEach(p => abrirPreview(p));
+  icons();
+  const n = sel.size;
+  $('btnGoAnalise').disabled = n === 0;
+  $('hintSel').textContent = n === 0 ? 'Selecione ao menos uma prova acima.'
+    : `${n} ${n===1?'prova selecionada':'provas selecionadas'} — pode continuar.`;
+}
+
+function toggleSel(key){
+  const p = PROVAS.find(x => x.key === key);
+  if (!p) return;
+  if (sel.has(p.key)){ sel.delete(p.key); diario(`Desmarcou: ${p.titulo}`); }
+  else { sel.add(p.key); diario(`Selecionou: ${p.titulo}`); }
+  renderProv();
+}
+
+/* clique em qualquer parte do card + teclado */
+ $('listaProv').addEventListener('click', e => {
+  const card = e.target.closest('[data-p]');
+  if (card) toggleSel(card.dataset.p);
+});
+ $('listaProv').addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset && e.target.dataset.p){
+    e.preventDefault();
+    toggleSel(e.target.dataset.p);
+  }
+});
+
+/* ---------- Barra de passos (4 etapas) ---------- */
+function passos(atual){
+  const st = [['Escolher','mouse-pointer-click'],['Analisar','scale'],['Calcular hash','fingerprint'],['Gerar termo','file-check']];
+  $('stepsBar').innerHTML = st.map(([t],i)=>{
+    const n = i+1, s = n < atual ? 'ok' : n === atual ? 'agora' : 'fut';
+    return `
+    <div class="flex flex-col items-center gap-1.5">
+      <span class="stepdot ${s==='ok'?'bg-green border-green text-white':s==='agora'?'bg-white border-green text-green scale-110 shadow-[0_0_0_4px_#22a05f22]':'bg-white border-line text-[#CFC9B8]'}">
+        ${s==='ok' ? '<i data-lucide="check" class="w-5 h-5"></i>' : n}
+      </span>
+      <span class="text-[11px] font-bold ${s==='fut'?'text-[#CFC9B8]':'text-ink'}">${t}</span>
+    </div>${n<4?'<span class="w-6 sm:w-14 h-0.5 rounded bg-line mt-5"></span>':''}`;
+  }).join(''); icons();
+}
+function irPasso(n){
+  [1,2,3,4].forEach(i => $('passo'+i).hidden = (i!==n));
+  $('resultado').hidden = true;
+  passos(n);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ---------- Passo 2: análise judicial ---------- */
+ $('btnGoAnalise').addEventListener('click', () => {
+  irPasso(2);
+  const est = {
+    forte : { box:'border-green/40 bg-green-light',  txt:'text-green',  bg:'bg-green text-white' },
+    media : { box:'border-amber/40 bg-[#FdFaF2]',    txt:'text-amber',  bg:'bg-amber text-white' },
+    fraca : { box:'border-red/40 bg-[#Fdf2f2]',      txt:'text-red',    bg:'bg-red text-white' }
+  };
+  $('analise').innerHTML = [...sel].map(key => {
+    const p = PROVAS.find(x => x.key === key);
+    const e = est[p.julg.nivel];
+    return `
+    <div class="card p-5 flex gap-4 items-start">
+      <span class="w-11 h-11 rounded-xl bg-green-light text-green grid place-items-center shrink-0"><i data-lucide="${p.ic}" class="w-5 h-5"></i></span>
+      <div class="min-w-0 flex-1">
+        <div class="flex flex-wrap items-center gap-2.5">
+          <span class="font-ttl font-bold text-lg">${p.titulo}</span>
+          <span class="inline-flex items-center gap-1.5 rounded-full ${e.bg} px-3 py-1 text-[11px] font-bold tracking-wide">
+            <i data-lucide="${p.julg.ic}" class="w-3.5 h-3.5"></i>${p.julg.rotulo}
+          </span>
+        </div>
+        <p class="mt-1.5 text-[13.5px] leading-relaxed text-soft">${p.julg.txt}</p>
+      </div>
+    </div>`;
+  }).join('');
+  icons();
+  diario('Analisou o valor das provas para um processo judicial');
+});
+
+ $('btnGoHash').addEventListener('click', () => {
+  irPasso(3);
+  $('digitais').innerHTML = [...sel].map(key => {
+    const p = PROVAS.find(x => x.key === key);
+    return `<div class="card p-5" id="dig-${p.key}">
+      <div class="flex items-center gap-3">
+        <span class="w-9 h-9 rounded-lg bg-green-light text-green grid place-items-center shrink-0"><i data-lucide="${p.ic}" class="w-[18px] h-[18px]"></i></span>
+        <span class="font-ttl font-bold">${p.titulo}</span>
+      </div>
+      <div class="mt-3 dig-slot text-soft font-medium text-[14px]">Aguardando cálculo…</div>
+    </div>`;
+  }).join('');
+  icons();
+  $('truque').hidden = true; $('truqueOut').innerHTML = '';
+  $('btnGoTermo').disabled = true;
+  $('hintHash').textContent = 'Calcule os hashes primeiro.';
+  diario('Iniciou o cálculo dos hashes (SHA-256, no navegador)');
+});
+
+/* ---------- Passo 3: cálculo ---------- */
+ $('btnDig').addEventListener('click', async () => {
+  $('btnDig').disabled = true;
+  for (const key of sel){
+    const p = PROVAS.find(x => x.key === key);
+    const slotEl = document.querySelector('#dig-' + key + ' .dig-slot');
+    if (!slotEl) continue;
+    slotEl.innerHTML = '<span class="inline-flex items-center gap-2"><span class="w-4 h-4 border-2 border-green border-t-transparent rounded-full animate-spin"></span>lendo o arquivo e calculando…</span>';
+    await sleep(750);
+    const h = await sha256(await bytesDe(p));
+    p.hash = h;
+    slotEl.innerHTML = `
+      <div class="pop">
+        ${stripHTML(h)}
+        <p class="mt-2 font-mono text-[10.5px] text-soft break-all leading-relaxed">${esp(h)}</p>
+        <div class="mt-2.5 flex flex-wrap items-center gap-3">
+          <span class="text-[13px] font-bold text-green">✓ Hash selado — a identidade matemática do arquivo.</span>
+          <button data-cp="${p.key}" class="link-acao ml-auto !px-3 !py-1.5 !text-[12px]">copiar hash</button>
+        </div>
+      </div>`;
+    diario(`Hash da ${p.titulo}: ${h.slice(0,16)}…`);
+    await sleep(300);
+  }
+  $('btnDig').disabled = false;
+  $('btnGoTermo').disabled = false;
+  $('hintHash').textContent = 'Hashes calculados — pode continuar.';
+  $('truque').hidden = false;
+  toast('Hashes calculados com sucesso.');
+});
+
+ $('digitais').addEventListener('click', async e => {
+  const b = e.target.closest('[data-cp]');
+  if (!b) return;
+  const p = PROVAS.find(x => x.key === b.dataset.cp);
+  if (!p || !p.hash) return;
+  await copiarTexto(p.hash);
+  toast('Hash copiado — cole no terminal para conferir depois.');
+});
+
+/* ---------- Teste de adulteração ---------- */
+ $('btnTruque').addEventListener('click', async () => {
+  const p = PROVAS.find(x => sel.has(x.key) && x.hash);
+  if (!p) return;
+  const out = $('truqueOut');
+  out.innerHTML = '<p class="text-center font-bold text-soft">editando 1 letra e recalculando…</p>';
+  await sleep(850);
+  const b = await bytesDe(p);
+  const b2 = new Uint8Array(b.length + 1); b2.set(b); b2[b.length] = 0x20;
+  const h2 = await sha256(b2);
+  let iguais = 0; for (let i=0;i<64;i++) if (p.hash[i] === h2[i]) iguais++;
+  out.innerHTML = `
+    <div class="pop space-y-5">
+      <div>
+        <p class="font-bold text-green text-sm mb-2">✓ Original — o arquivo que você selou</p>
+        ${stripHTML(p.hash)}
+        <p class="mt-1.5 font-mono text-[10.5px] text-soft break-all">${esp(p.hash)}</p>
+      </div>
+      <div>
+        <p class="font-bold text-red text-sm mb-2">✗ Editado — a mesma prova com 1 espaço a mais</p>
+        ${stripDiffHTML(h2, p.hash)}
+        <p class="mt-1.5 font-mono text-[10.5px] text-[#a33636] break-all">${esp(h2)}</p>
+      </div>
+      <div class="legenda"><i data-lucide="lightbulb"></i>
+        <span><b>Resultado:</b> só <b>${iguais}</b> de 64 posições ficaram iguais (quadradinhos <b>cinza</b>).
+        A digital ficou irreconhecível — <b>impossível disfarçar uma edição</b>.</span></div>
+    </div>`;
+  icons();
+  diario(`Teste de adulteração na ${p.titulo}: ${64-iguais}/64 posições mudaram`);
+  toast('Viu? Uma letra mudou tudo.', '⚠️');
+});
+
+ $('btnGoTermo').addEventListener('click', () => irPasso(4));
+
+/* ---------- Passo 4: termo ---------- */
+ $('btnTermo').addEventListener('click', () => {
+  const nome = $('fNome').value.trim(), dest = $('fDest').value;
+  if (!nome){ toast('Escreva o nome de quem guardou as provas.', '✏️'); $('fNome').focus(); return; }
+  if (!dest){ toast('Escolha para quem as provas serão entregues.', '📋'); return; }
+  const data = fmtBR(new Date());
+  $('tNome').textContent = nome; $('tData').textContent = data; $('tDest').textContent = dest;
+  $('tProv').innerHTML = [...sel].map(key => {
+    const p = PROVAS.find(x => x.key === key);
+    return `<tr class="border-b border-[#F2EFE6]">
+      <td class="p-2.5 font-bold whitespace-nowrap">${p.id}</td>
+      <td class="p-2.5 font-mono text-[11.5px]">${p.arquivo}</td>
+      <td class="p-2.5 font-mono text-[10px] break-all text-green">${p.hash}</td></tr>`;
+  }).join('');
+  window.__T = { nome, dest, data, provas: [...sel].map(key => PROVAS.find(x => x.key === key)) };
+  $('resultado').hidden = false;
+  $('resultado').scrollIntoView({ behavior:'smooth' });
+  diario(`Termo gerado por ${nome} · destino: ${dest}`);
+  toast('Termo de Cadeia de Custódia gerado.', '📄');
+});
+
+/* ---------- PDF ---------- */
+ $('btnPDF').addEventListener('click', () => {
+  const T = window.__T;
+  if (!T) return;
+  if (!window.jspdf){ toast('O gerador de PDF ainda está carregando — tente de novo em instantes.', '⏳'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+  doc.setTextColor('#e8e4d8'); doc.setFontSize(54); doc.setFont('helvetica','bold');
+  doc.text('SIMULACAO', 105, 160, { align:'center', angle: 38 });
+  doc.setTextColor('#2E2A24');
+  let y = 24;
+  doc.setFontSize(18); doc.setFont('helvetica','bold');
+  doc.text('TERMO DE CADEIA DE CUSTODIA', 105, y, { align:'center' }); y += 6;
+  doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor('#6B6558');
+  doc.text('Simulador Forense Digital - documento educacional, sem valor juridico real', 105, y, { align:'center' }); y += 8;
+  doc.setDrawColor(34,160,95); doc.setLineWidth(0.8); doc.line(20, y, 190, y); y += 9;
+  doc.setTextColor('#2E2A24'); doc.setFontSize(12); doc.setFont('helvetica','bold');
+  doc.text(`Guardou as provas: ${T.nome}`, 20, y); y += 7;
+  doc.text(`Data da geracao: ${T.data}`, 20, y); y += 7;
+  doc.text(`Entregue a: ${T.dest}`, 20, y); y += 7;
+  doc.text('Caso: Marina - perfil falso no Instagram (ficticio)', 20, y); y += 11;
+  doc.setFillColor(46,42,36); doc.rect(20, y, 170, 8, 'F');
+  doc.setTextColor('#ffffff'); doc.setFont('courier','bold'); doc.setFontSize(7.5);
+  doc.text('PROVA', 23, y+5.3); doc.text('ARQUIVO', 42, y+5.3); doc.text('HASH SHA-256', 92, y+5.3);
+  y += 8; doc.setTextColor('#2E2A24'); doc.setFont('courier','normal');
+  const y0 = y;
+  T.provas.forEach(p => {
+    if (y > 262){ doc.addPage(); y = 20; }
+    doc.setDrawColor(200,195,180); doc.setLineWidth(0.2); doc.rect(20, y, 170, 10);
+    doc.setFontSize(8); doc.text(p.id, 23, y+4.2);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.text(p.arquivo, 42, y+4.2);
+    doc.setFont('courier','normal'); doc.setFontSize(6); doc.text(p.hash, 92, y+4.5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor('#6B6558');
+    doc.text(doc.splitTextToSize(p.desc, 66)[0], 42, y+8.6); doc.setTextColor('#2E2A24');
+    y += 10;
+  });
+  doc.setLineWidth(0.45); doc.rect(20, y0, 170, y - y0);
+  y += 10;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor('#4a453c');
+  doc.text(doc.splitTextToSize('O hash SHA-256 de cada arquivo foi calculado localmente no navegador, no momento da coleta. Qualquer pessoa pode conferir com "sha256sum" (Linux/Mac) ou "certutil -hashfile ... SHA256" (Windows): o resultado sera identico ao da tabela. Se qualquer letra for alterada, o hash muda completamente - a edicao fica denunciada.', 170), 20, y);
+  y += 24;
+  doc.setDrawColor(46,42,36); doc.setLineWidth(0.3);
+  doc.line(30, y, 85, y); doc.line(110, y, 165, y);
+  doc.setFontSize(8); doc.setTextColor('#6B6558');
+  doc.text('Quem guardou (coletor)', 57, y+5, {align:'center'});
+  doc.text('Quem recebeu', 137, y+5, {align:'center'});
+  const n = doc.getNumberOfPages();
+  for (let i = 1; i <= n; i++){
+    doc.setPage(i);
+    doc.setFontSize(7); doc.setTextColor('#B4AC97');
+    doc.text('Forense Digital - simulador educacional - sem valor juridico real', 105, 288, {align:'center'});
+    doc.text(`${i}/${n}`, 194, 288, {align:'right'});
+  }
+  doc.save('termo-cadeia-de-custodia.pdf');
+  diario('Baixou o Termo em PDF');
+  toast('Termo baixado em PDF.', '📄');
+});
+
+/* ---------- Baixar provas ---------- */
+ $('btnArq').addEventListener('click', async () => {
+  for (const key of sel){
+    const p = PROVAS.find(x => x.key === key);
+    const b = await bytesDe(p);
+    const url = URL.createObjectURL(new Blob([b], { type: p.mime }));
+    const a = document.createElement('a'); a.href = url; a.download = p.arquivo;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    await sleep(400);
+  }
+  diario('Baixou os arquivos das provas');
+  toast('Arquivos baixados — os hashes conferem com o termo.', '📁');
+});
+
+/* ---------- Experimento final ---------- */
+ $('btnTesteHash').addEventListener('click', async () => {
+  const p = PROVAS[0];
+  const btn = $('btnTesteHash');
+  btn.disabled = true;
+  $('testeOut').innerHTML = '<p class="text-[13.5px] font-bold text-soft">preparando o arquivo…</p>';
+  const b = await bytesDe(p);
+  if (!p.hash) p.hash = await sha256(b);
+  const url = URL.createObjectURL(new Blob([b], { type: p.mime }));
+  const a = document.createElement('a'); a.href = url; a.download = p.arquivo;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+
+  const cmds = [
+    ['Windows (Prompt)', `certutil -hashfile ${p.arquivo} SHA256`],
+    ['Windows (PowerShell)', `Get-FileHash ${p.arquivo} -Algorithm SHA256`],
+    ['Linux', `sha256sum ${p.arquivo}`],
+    ['Mac', `shasum -a 256 ${p.arquivo}`]
+  ];
+  $('testeOut').innerHTML = `
+  <div class="pop space-y-5">
+    <div class="flex gap-3 items-start rounded-xl bg-white border border-green/30 p-4">
+      <i data-lucide="check" class="w-5 h-5 text-green mt-0.5 shrink-0"></i>
+      <p class="text-[13.5px] leading-relaxed"><b>Arquivo baixado!</b> Está na sua pasta de Downloads:
+      <span class="font-mono text-[12px] bg-[#F4F2EB] px-1.5 py-0.5 rounded">${p.arquivo}</span></p>
+    </div>
+    <div>
+      <p class="text-[13.5px] font-bold">No terminal: cole o comando, deixe um espaço no final e arraste o arquivo pra dentro da janela. Enter.</p>
+      <div class="mt-3 grid sm:grid-cols-2 gap-3">
+        ${cmds.map(([sis, cmd]) => `
+        <div>
+          <div class="text-[11px] font-bold text-soft mb-1.5">${sis}</div>
+          <div class="cmdbox">
+            <span class="sig">›</span><code>${esc(cmd)}</code>
+            <button class="btncopy" data-cmd="${esc(cmd)}">copiar</button>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div>
+      <p class="text-[13.5px] font-bold">O código no terminal deve ser exatamente este:</p>
+      <div class="mt-2 rounded-xl bg-ink text-green font-mono text-[11px] sm:text-[12px] px-4 py-3 break-all leading-relaxed">${esp(p.hash)}</div>
+    </div>
+    <div class="legenda-cinza"><i data-lucide="info"></i>
+      <span><b>Se for igual:</b> você verificou a integridade de um arquivo real — o mesmo processo dos peritos digitais.</span></div>
+  </div>`;
+  icons();
+  btn.disabled = false;
+  diario(`Experimento final: baixou ${p.arquivo} para verificar o hash`);
+  toast('Prova 1 baixada — siga os passos para conferir o hash.', '🧪');
+});
+
+/* ---------- Reiniciar ---------- */
+ $('btnDeNovo').addEventListener('click', () => {
+  sel.clear();
+  PROVAS.forEach(p => {
+    p.hash = null; p.bytes = null; p.gen = null;
+    if (p.url){ URL.revokeObjectURL(p.url); p.url = null; }
+  });
+  $('fNome').value = ''; $('fDest').value = '';
+  $('digitais').innerHTML = ''; $('truqueOut').innerHTML = ''; $('analise').innerHTML = '';
+  renderProv(); irPasso(1);
+  diario('Reiniciou a simulação');
+  toast('Simulação reiniciada.', '🔄');
+});
+
+/* ---------- Início ---------- */
+renderProv(); passos(1); demo(); icons();
+diario('Abriu o simulador do Caso Marina');
+</script>
+</body>
+</html>
